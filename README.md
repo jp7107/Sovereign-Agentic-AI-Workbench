@@ -103,11 +103,57 @@ flowchart TD
     Deliver --> End([Await Human Approval])
 ```
 
-## 7. Data Flow
+## 7. End-to-End Design Flow Architecture
 
-1. **Ingestion:** Users upload documents to `inbox/`. The backend extracts text/images, chunks them, generates CPU-based BGE-m3 embeddings, and stores them in SQLite.
-2. **Querying:** When `kb.search` is invoked, the query is embedded via CPU. SQLite executes a BM25 sparse search and a dense vector search. Results are fused using RRF.
-3. **Synthesis:** The retrieved chunks (with citations and bounding boxes) are passed into the prompt context for the selected generative model.
+The following sequence diagram illustrates the end-to-end architectural flow of how a user's prompt is processed, from data ingestion to final deliverable generation, ensuring a completely air-gapped lifecycle.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant UI as Frontend (React/Vite)
+    participant API as FastAPI Control Plane
+    participant DB as SQLite (Knowledge Base)
+    participant Agent as Python Agent Loop
+    participant Router as Model Router
+    participant Ollama as Local LLMs
+    participant Sandbox as Docker Sandbox
+
+    %% Document Ingestion Phase
+    Note over User, DB: Phase 1: Local Knowledge Ingestion
+    User->>UI: Uploads Confidential Manual (PDF/TXT)
+    UI->>API: POST /api/documents/upload
+    API->>DB: Extract text, chunk, generate CPU Embeddings
+    DB-->>API: Indexed in SQLite (BM25 + Dense)
+    API-->>UI: Upload Success
+
+    %% Query Phase
+    Note over User, Sandbox: Phase 2: Agentic Execution & Generation
+    User->>UI: "Calculate corrosion rate and draft approval note"
+    UI->>API: POST /api/runs (Query)
+    API->>Agent: Initialize DAG State Machine
+    
+    Agent->>Router: Request Plan Generation
+    Router->>Ollama: Load `qwen2.5:3b-instruct`
+    Ollama-->>Agent: JSON-Schema Validated Plan
+    
+    loop Every Step in Plan
+        Agent->>Router: Execute step (e.g., kb.search)
+        Router->>DB: Perform Hybrid RRF Search
+        DB-->>Agent: Retrieved chunks + Citations
+        
+        Agent->>Router: Execute step (e.g., calc.evaluate)
+        Router->>Sandbox: Execute sympy formula in net=none Docker
+        Sandbox-->>Agent: Math result + Calculation steps
+    end
+
+    Agent->>Router: Synthesize Final Deliverable
+    Router->>Ollama: Render Document text
+    Ollama-->>Agent: Draft Content
+    Agent->>API: Compile into .docx / .xlsx
+    API-->>UI: Stream SSE Events & File Download URL
+    UI-->>User: Downloads Final Deliverable
+```
 
 ## 8. Technology Stack
 
