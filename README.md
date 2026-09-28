@@ -3,9 +3,9 @@
 > **AI comes to your data — not the other way around.**
 
 <p align="center">
-  <img src="image.png" width="48%" alt="PRAHARI Architecture" />
+  <img src="docs/assets/architecture.png" width="48%" alt="PRAHARI Architecture" />
   &nbsp;
-  <img src="image-1.png" width="48%" alt="PRAHARI UI" />
+  <img src="docs/assets/ui.png" width="48%" alt="PRAHARI UI" />
 </p>
 
 PRAHARI is a self-hosted, air-gapped, agentic AI workbench built for confidential industrial work in refineries, PSUs, and defense units.
